@@ -152,7 +152,8 @@ class AlphaBacktest:
                     else:
                         scatter(index,ratio,color="red")
                     if retData:
-                        output += str(rows["Date"])+","+str(rows["Expiry"])+","+str(rows["Strike Price"])+","+str(result)+","+str(ratio)+"\n"
+                        ratio = rows["Alpha"] / rows["Alpha-Mean"]
+                        output += str(rows["Date"])+","+str(rows["Expiry"])+","+str(rows["Strike Price"])+","+str(result)+","+str(rows["Alpha"])+","+str(rows["Alpha-Mean"])+","+str(rows["Alpha"] / rows["Alpha-Mean"])+"\n"
         if retData:
             return output
                     
@@ -165,6 +166,14 @@ class Loader:
     def __init__(self,options,prices):
         # List of all options and prices files mapped to each other
         self.options = options
+        self.options_2 = []
+        if "PE" in options[0]:
+            for x in options:
+                self.options_2.append(x.replace("PE","CE"))
+        elif "CE" in options[0]:
+            for x in options:
+                self.options_2.append(x.replace("CE","PE"))
+        print(self.options_2)
         self.prices = prices
         self.backtests = []
         for i in range(0,len(options)):
@@ -258,11 +267,57 @@ class Loader:
     
     def plot_scatter(self,threshold,limit=999999):
         with open("trades.csv","w") as trades:
-            trades.write("Date,Expiry,Strike Price,Returns,Ratio"+"\n")
+            trades.write("Date,Expiry,Strike Price,Returns,Alpha,Alpha-Mean,Ratio"+"\n")
         for test in self.backtests:
             data = test.plot_scatter(threshold,limit,True)
             with open("trades.csv","a") as trades:
                 trades.write(data)
+        
+        self.create_xlsx()
+    
+    def create_xlsx(self):
+        df1 = pd.read_csv("trades.csv")
+        options_df = []
+        for i in self.options:
+            tmp = pd.read_csv(i)
+            options_df.append(tmp)
+
+        options_2_df = []
+        for i in self.options_2:
+            tmp = pd.read_csv(i)
+            options_2_df.append(tmp)
+        
+        prices_df = []
+        for i in self.prices:
+            tmp = pd.read_csv(i)
+            prices_df.append(tmp)
+        
+        df2 = pd.concat(options_df)
+        df3 = pd.concat(options_2_df)
+        df4 = pd.concat(prices_df)
+        
+        df2["Alpha"] = (df4["Close"] - df2["Strike Price"]) / df2["Close"]
+        df2["Alpha-Change"] = ((df2["Alpha"] - df2.Alpha.shift(1)) / df2["Alpha"])*100
+        df2["Alpha-Mean"] = (df2.Alpha.shift(1)+df2.Alpha.shift(2)+df2.Alpha.shift(3)) / 3
+        df2["Change"] = ((df2["Close"] - df2["Open"]) / df2["Open"])*100
+        df2["Ratio"] = df2["Alpha"] / df2["Alpha-Mean"]
+        
+        df3["Alpha"] = (df4["Close"] - df3["Strike Price"]) / df3["Close"]
+        df3["Alpha-Change"] = ((df3["Alpha"] - df3.Alpha.shift(1)) / df3["Alpha"])*100
+        df3["Alpha-Mean"] = (df3.Alpha.shift(1)+df3.Alpha.shift(2)+df3.Alpha.shift(3)) / 3
+        df3["Change"] = ((df3["Close"] - df3["Open"]) / df3["Open"])*100
+        df3["Ratio"] = df3["Alpha"] / df3["Alpha-Mean"]
+        
+        df4["Change"] = ((df4["Close"] - df4["Open"]) / df4["Close"])*100
+        
+        writer = pd.ExcelWriter("results.xlsx",engine='xlsxwriter')
+        
+        df1.to_excel(writer,sheet_name="trades")
+        df2.to_excel(writer,sheet_name="puts chain")
+        df3.to_excel(writer,sheet_name="calls chain")
+        df4.to_excel(writer,sheet_name="prices")
+        
+        writer.save()
 
 
 # In[20]:
@@ -295,13 +350,19 @@ class Loader:
 # In[3]:
 
 
-a = "banknifty-options-CE-1.csv"
+# a = "banknifty-options-CE-1.csv"
 
 
 # In[7]:
 
 
-a.split("-")[3].split(".")[0]
+# a.split("-")[3].split(".")[0]
+
+
+# In[2]:
+
+
+# "banknifty-options-PE-1.csv".replace("PE","CE")
 
 
 # In[ ]:
