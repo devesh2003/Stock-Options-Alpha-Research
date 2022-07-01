@@ -9,7 +9,7 @@ from matplotlib.pyplot import *
 from statistics import mean
 
 
-# In[8]:
+# In[9]:
 
 
 class AlphaBacktest:
@@ -152,13 +152,13 @@ class AlphaBacktest:
                     else:
                         scatter(index,ratio,color="red")
                     if retData:
-                        output += str(rows["Date"])+","+str(rows["Expiry"])+","+str(rows["Strike Price"])+","+str(result)+"\n"
+                        output += str(rows["Date"])+","+str(rows["Expiry"])+","+str(rows["Strike Price"])+","+str(result)+","+str(ratio)+"\n"
         if retData:
             return output
                     
 
 
-# In[2]:
+# In[10]:
 
 
 class Loader:
@@ -258,7 +258,7 @@ class Loader:
     
     def plot_scatter(self,threshold,limit=999999):
         with open("trades.csv","w") as trades:
-            trades.write("Date,Expiry,Strike Price,Returns"+"\n")
+            trades.write("Date,Expiry,Strike Price,Returns,Ratio"+"\n")
         for test in self.backtests:
             data = test.plot_scatter(threshold,limit,True)
             with open("trades.csv","a") as trades:
