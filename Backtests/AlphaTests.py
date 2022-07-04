@@ -9,7 +9,7 @@ from matplotlib.pyplot import *
 from statistics import mean
 
 
-# In[9]:
+# In[1]:
 
 
 class AlphaBacktest:
@@ -19,10 +19,11 @@ class AlphaBacktest:
         self.construct_features()
         try:
             self.batch = options.split("-")[3].split(".")[0]
+            stk = options.split("-")[0]
             if "PE" in options:
-                self.result_name = "banknifty-options-CE-"+self.batch+".csv"
+                self.result_name = stk+"-options-CE-"+self.batch+".csv"
             else:
-                self.result_name = "banknifty-options-PE-"+self.batch+".csv"
+                self.result_name = stk+"-options-PE-"+self.batch+".csv"
         except:
             pass
     
@@ -33,6 +34,10 @@ class AlphaBacktest:
         self.options["Alpha-Change"] = ((self.options["Alpha"] - self.options.Alpha.shift(1)) / self.options["Alpha"])*100
         self.options["Alpha-Mean"] = (self.options.Alpha.shift(1)+self.options.Alpha.shift(2)+self.options.Alpha.shift(3)) / 3
         self.options["Change"] = ((self.options["Close"] - self.options["Open"]) / self.options["Open"])*100
+        
+        for index,row in self.options.iterrows():
+            if row["Change"] == "inf":
+                row["Change"] = 0
         
     def find_optimal_threshold(self,toPrint=False):
         threshold = 0.3
@@ -95,14 +100,17 @@ class AlphaBacktest:
                         # Buying on the open of the next day
                         if self.options["High"][index+1] >= self.options["Open"][index+1] * 1.3:
                             result = 30
-                        
-                        #Stop loss -> -10%
-                        elif self.options["Low"][index+1] <= self.options["Open"][index+1] * 0.9:
-                            result = -10
-                        
-                        #Square off position
+                        # Take all loss if target is not hit
                         else:
                             result = self.options["Change"][index+1]
+                        
+                        #Stop loss -> -10%
+#                         elif self.options["Low"][index+1] <= self.options["Open"][index+1] * 0.9:
+#                             result = -10
+                        
+#                         #Square off position
+#                         else:
+#                             result = self.options["Change"][index+1]
                         
                         #Calculate Accuracy
                         if result > 0:
@@ -139,7 +147,7 @@ class AlphaBacktest:
         Y = []
         output = ""
         for index,rows in self.options.iterrows():
-            if index == 0 or rows["LTP"] == 0 or self.options["LTP"][index-1] == 0:
+            if index == 0 or rows["Open"] == 0 or rows["LTP"] == 0 or self.options["LTP"][index-1] == 0:
                 continue
             ratio = rows["Alpha"] / rows["Alpha-Mean"]
             if ratio >= threshold and ratio < limit:
@@ -171,9 +179,8 @@ class Loader:
             for x in options:
                 self.options_2.append(x.replace("PE","CE"))
         elif "CE" in options[0]:
-            for x in options:
+             for x in options:
                 self.options_2.append(x.replace("CE","PE"))
-        print(self.options_2)
         self.prices = prices
         self.backtests = []
         for i in range(0,len(options)):
@@ -296,6 +303,10 @@ class Loader:
         df3 = pd.concat(options_2_df)
         df4 = pd.concat(prices_df)
         
+        df4 = df4[~df4.index.duplicated()]
+        df2 = df2[~df2.index.duplicated()]
+        df3 = df3[~df3.index.duplicated()]
+        
         df2["Alpha"] = (df4["Close"] - df2["Strike Price"]) / df2["Close"]
         df2["Alpha-Change"] = ((df2["Alpha"] - df2.Alpha.shift(1)) / df2["Alpha"])*100
         df2["Alpha-Mean"] = (df2.Alpha.shift(1)+df2.Alpha.shift(2)+df2.Alpha.shift(3)) / 3
@@ -363,6 +374,12 @@ class Loader:
 
 
 # "banknifty-options-PE-1.csv".replace("PE","CE")
+
+
+# In[ ]:
+
+
+
 
 
 # In[ ]:
