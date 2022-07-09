@@ -17,10 +17,11 @@ from ExcelFormatter import ExcelFormatter
 
 
 class OVBacktest:
-    def __init__(self,options,prices):
+    def __init__(self,options,prices,strategy=2):
         # Load dataframes
         self.options = pd.read_csv(options)
         self.prices = pd.read_csv(prices)
+        self.strategy = strategy
         
         # Keep record of all trades
         self.trades = "Date,Expiry,Strike,Returns,OV,OV-Mean,Ratio\n"
@@ -57,18 +58,21 @@ class OVBacktest:
         
     # Integrate new risk management strategies by chanding here
     def get_results(self,index):
+        strategy = self.strategy
         
         # Return change on the next day, buying the options the next day
         # and holding it for the entire day
-        # return self.options["Change"][index+1]
+        if strategy == 1:
+            return self.options["Change"][index+1]
         
         # Returns from buying the opposite option
-        # df = pd.read_csv(self.result_name) [Execution time: 40s]
-        df = self.df # [Execution time: 10s]
-        if df["Open"][index+1] == 0:
-            return 0
-        df["Change"] = ((df["Close"] - df["Open"]) / df["Open"]) * 100
-        return df["Change"][index+1]
+        if strategy == 2:
+            # df = pd.read_csv(self.result_name) [Execution time: 40s]
+            df = self.df # [Execution time: 10s]
+            if df["Open"][index+1] == 0:
+                return 0
+            df["Change"] = ((df["Close"] - df["Open"]) / df["Open"]) * 100
+            return df["Change"][index+1]
     
     def find_net_returns(self,thresh,verbose=False,upper_threshold=-99):
         
@@ -137,7 +141,7 @@ class OVBacktest:
 
 
 class Loader:
-    def __init__(self,options,prices):
+    def __init__(self,options,prices,strategy=2):
         # List of all options and prices files mapped to each other
         self.options = options
         
@@ -145,15 +149,21 @@ class Loader:
         self.options_2 = []
         if "PE" in options[0]:
             for x in options:
-                self.options_2.append(x.replace("PE","CE"))
+                # self.options_2.append(x.replace("PE","CE"))
+                tmp = x.split("-")
+                tmp[2] = "CE"
+                self.options_2.append("-".join(tmp))
         elif "CE" in options[0]:
              for x in options:
-                self.options_2.append(x.replace("CE","PE"))
+                # self.options_2.append(x.replace("CE","PE"))
+                tmp = x.split("-")
+                tmp[2] = "PE"
+                self.options_2.append("-".join(tmp))
         
         self.prices = prices
         self.backtests = []
         for i in range(0,len(options)):
-            self.backtests.append(OVBacktest(options[i],prices[i]))
+            self.backtests.append(OVBacktest(options[i],prices[i],strategy=strategy))
     
     def find_net_returns(self,thresh,upper_threshold=-99,verbose=False):
         # Loop over all OV models
@@ -274,6 +284,36 @@ class Loader:
         
         return OPT_THRESH
         
+
+
+# In[1]:
+
+
+test = "AMBUJACEM-options-PE-11.csv"
+
+
+# In[4]:
+
+
+test = test.split("-")
+
+
+# In[5]:
+
+
+test[2] = "CE"
+
+
+# In[6]:
+
+
+test
+
+
+# In[8]:
+
+
+
 
 
 # In[ ]:
